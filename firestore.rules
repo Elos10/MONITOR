@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function active() { return signedIn() && userDoc().data.active == true; }
+    function roleIn(roles) { return active() && userDoc().data.role in roles; }
+    function canWrite() { return roleIn(['administrador','gabinete','assessoria','diretoria','departamento','secao','servidor']); }
+
+    match /users/{userId} {
+      allow read: if active();
+      allow create, update, delete: if roleIn(['administrador']);
+    }
+    match /objects/{id} {
+      allow read: if active();
+      allow create: if canWrite() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if canWrite() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+    match /activities/{id} {
+      allow read: if active(); allow create, update: if canWrite(); allow delete: if false;
+    }
+    match /costs/{id} {
+      allow read: if active(); allow create: if canWrite() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /events/{id} {
+      allow read: if active(); allow create: if canWrite() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if active()
+        && resource.data.assignedTo == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'assigneeNote', 'receivedAt', 'receivedBy', 'receivedByName', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+    match /pendingItems/{id} {
+      allow read: if active(); allow create, update: if canWrite(); allow delete: if false;
+    }
+    match /notificationReads/{id} {
+      allow read: if active() && resource.data.userId == request.auth.uid;
+      allow create: if active() && request.resource.data.userId == request.auth.uid;
+      allow update: if active() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+    match /documents/{id} {
+      allow read: if active(); allow create: if canWrite(); allow update, delete: if false;
+    }
+    match /imports/{id} {
+      allow read: if active(); allow create: if canWrite(); allow update: if roleIn(['administrador','gestor']); allow delete: if false;
+    }
+    match /audit/{id} {
+      allow read: if roleIn(['administrador','gabinete','assessoria']);
+      allow create: if active() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

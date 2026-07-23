@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)); }
+    function canWrite() { return signedIn() && userDoc().data.active == true && userDoc().data.role in ['administrador','gabinete','assessoria','diretoria','departamento','secao','servidor']; }
+    match /documents/{objectId}/{fileName} {
+      allow read: if signedIn() && userDoc().data.active == true;
+      allow create: if canWrite() && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType in ['application/pdf','image/jpeg','image/png','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+      allow update, delete: if false;
+    }
+  }
+}

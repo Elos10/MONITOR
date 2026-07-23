@@ -1,0 +1,34 @@
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs locais
+*.log
+server.out.log
+server.err.log
+
+# Cópias antigas/aninhadas
+PGP SEMED/
+
+# Dependências e builds, se forem adicionados no futuro
+node_modules/
+dist/
+build/
+
+# Firebase local e credenciais geradas
+firebase-config.js
+.firebase/
+firebase-debug.log
+ui-debug.log
+gha-creds-*.json
+*service-account*.json
+*service_account*.json
+*firebase-adminsdk*.json
+FIREBASE_SERVICE_ACCOUNT*.json
+
+# Ambientes locais
+.env
+.env.*
+!.env.example
