@@ -15,6 +15,11 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+      GOOGLE_CLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
+      GCLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -23,7 +28,6 @@ jobs:
 
       - name: Validar configuração e preparar credencial
         env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
@@ -55,21 +59,19 @@ jobs:
             && account.private_key
             && account.client_email;
           if (!valid) {
-            console.error('::error::FIREBASE_SERVICE_ACCOUNT inválido. Cole o conteúdo completo do JSON ou seu conteúdo em Base64.');
+            console.error('::error::FIREBASE_SERVICE_ACCOUNT inválido. Cole o JSON completo ou seu conteúdo em Base64.');
             process.exit(1);
           }
           if (account.project_id !== process.env.FIREBASE_PROJECT_ID) {
             console.error(`::error::O projeto da conta de serviço (${account.project_id}) é diferente de FIREBASE_PROJECT_ID.`);
             process.exit(1);
           }
-          const path = `${process.env.RUNNER_TEMP}/firebase-service-account.json`;
-          fs.writeFileSync(path, JSON.stringify(account), { mode: 0o600 });
+          fs.writeFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, JSON.stringify(account), { mode: 0o600 });
           console.log(`Credencial preparada para o projeto ${account.project_id}.`);
           NODE
 
       - name: Gerar configuração web
         env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
@@ -85,12 +87,60 @@ jobs:
           };
           EOF
 
-      - name: Publicar aplicação, funções, regras e índices
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
-          GOOGLE_CLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
-          GCLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
+      - name: Instalar Firebase CLI
+        run: npm install --global firebase-tools@latest
+
+      - name: Validar autenticação e acesso ao projeto
         run: |
-          test -s "$GOOGLE_APPLICATION_CREDENTIALS" || (echo "::error::O arquivo de credencial não foi criado" && exit 1)
-          npx --yes firebase-tools@latest deploy --only hosting,functions,firestore:rules,firestore:indexes,storage --project "$FIREBASE_PROJECT_ID" --non-interactive
+          set -o pipefail
+          firebase projects:list --json 2>&1 | tee firebase-access.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(grep -E 'Error:|HTTP Error|permission|credential|authenticat' firebase-access.log | tail -1 | tr '\n\r' ' ')
+            echo "::error title=Autenticação Firebase::${message:-A conta de serviço não possui acesso ao projeto.}"
+            exit "$status"
+          fi
+
+      - name: Publicar Hosting
+        run: |
+          set -o pipefail
+          firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1 | tee firebase-hosting.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(grep -E 'Error:|HTTP Error|permission|denied|forbidden' firebase-hosting.log | tail -1 | tr '\n\r' ' ')
+            echo "::error title=Falha no Firebase Hosting::${message:-Consulte o log da etapa Publicar Hosting.}"
+            exit "$status"
+          fi
+
+      - name: Publicar Firestore
+        run: |
+          set -o pipefail
+          firebase deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1 | tee firebase-firestore.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(grep -E 'Error:|HTTP Error|permission|denied|forbidden' firebase-firestore.log | tail -1 | tr '\n\r' ' ')
+            echo "::error title=Falha no Firestore::${message:-Consulte o log da etapa Publicar Firestore.}"
+            exit "$status"
+          fi
+
+      - name: Publicar regras do Storage
+        run: |
+          set -o pipefail
+          firebase deploy --only storage --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1 | tee firebase-storage.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(grep -E 'Error:|HTTP Error|permission|denied|forbidden' firebase-storage.log | tail -1 | tr '\n\r' ' ')
+            echo "::error title=Falha no Firebase Storage::${message:-Consulte o log da etapa Publicar regras do Storage.}"
+            exit "$status"
+          fi
+
+      - name: Publicar Functions
+        run: |
+          set -o pipefail
+          firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1 | tee firebase-functions.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(grep -E 'Error:|HTTP Error|permission|denied|forbidden|billing|Blaze' firebase-functions.log | tail -1 | tr '\n\r' ' ')
+            echo "::error title=Falha no Firebase Functions::${message:-Verifique o plano Blaze e as permissões da conta de serviço.}"
+            exit "$status"
+          fi
