@@ -134,7 +134,7 @@ function editObjectModal(id){
 
 async function updateObject(ev,id){
   ev.preventDefault();const o=state.objects.find(item=>item.id===id);if(!o)return;
-  const f=Object.fromEntries(new FormData(ev.target)),before={title:o.title,area:o.area,owner:o.owner,status:o.status,priority:o.priority,start:o.start,due:o.due,budget:o.budget,product:o.product,description:o.description},changes={title:f.title,area:f.area,owner:f.owner,status:f.status,priority:f.priority,start:f.start,due:f.due,budget:+f.budget,product:f.product,description:f.description};
+  const f=Object.fromEntries(new FormData(ev.target)),before={title:o.title,area:o.area,owner:o.owner,status:o.status,priority:o.priority,start:o.start,due:o.due,budget:o.budget,product:o.product,description:o.description},changes={title:f.title,area:f.area,owner:f.owner,status:f.status,priority:f.priority,start:f.start,due:f.due,budget:parseBrazilianCurrency(f.budget),product:f.product,description:f.description};
   if(firebase&&o.dbId){try{const {doc,collection,writeBatch,serverTimestamp}=firebase.firestoreSdk,batch=writeBatch(firebase.db),objectRef=doc(firebase.db,'objects',o.dbId),auditRef=doc(collection(firebase.db,'audit')),eventRef=doc(collection(firebase.db,'events'));batch.update(objectRef,{title:changes.title,area:changes.area,ownerName:changes.owner,status:changes.status,priority:changes.priority,plannedStart:changes.start,plannedEnd:changes.due,budget:changes.budget,product:changes.product,description:changes.description,updatedAt:serverTimestamp(),updatedBy:session.id});batch.set(eventRef,{objectId:o.dbId,objectCode:o.id,eventType:'Edição',description:'Dados principais do objeto atualizados',createdBy:session.id,createdByName:session.name,eventAt:serverTimestamp()});batch.set(auditRef,{userId:session.id,userName:session.name,action:'UPDATE',entity:'objects',recordId:o.dbId,oldData:before,newData:changes,createdAt:serverTimestamp()});await batch.commit()}catch(error){return toast('Erro ao atualizar objeto: '+error.message)}}
   Object.assign(o,changes);state.events.unshift({id:crypto.randomUUID(),objectId:o.id,date:new Date().toLocaleString('sv-SE').slice(0,16),type:'Edição',text:'Dados principais do objeto atualizados',user:session.name});save();closeModal();toast('Objeto atualizado com sucesso.');render()
 }
@@ -184,7 +184,28 @@ function calculateObjectDuration(form){
 }
 
 addObject=async function(ev){
-  ev.preventDefault();const form=ev.target,duration=calculateObjectDuration(form);if(duration===null){form.reportValidity();return}const f=Object.fromEntries(new FormData(form)),n=String(Math.max(0,...state.objects.map(o=>+o.id.split('-').pop()))+1).padStart(3,'0'),code=`OBJ-${new Date().getFullYear()}-${n}`,o={id:code,title:f.title,product:f.product,objectType:f.objectType,priority:f.priority,budget:+f.budget,start:f.start,due:f.due,duration:+f.duration,status:f.status,interventionType:f.interventionType,owner:f.owner,area:f.primaryArea,primaryArea:f.primaryArea,secondaryArea:f.secondaryArea,observation:f.observation||'',description:f.observation||'',progress:0,spent:0};
+  ev.preventDefault();const form=ev.target,duration=calculateObjectDuration(form);if(duration===null){form.reportValidity();return}const f=Object.fromEntries(new FormData(form)),n=String(Math.max(0,...state.objects.map(o=>+o.id.split('-').pop()))+1).padStart(3,'0'),code=`OBJ-${new Date().getFullYear()}-${n}`,o={id:code,title:f.title,product:f.product,objectType:f.objectType,priority:f.priority,budget:parseBrazilianCurrency(f.budget),start:f.start,due:f.due,duration:+f.duration,status:f.status,interventionType:f.interventionType,owner:f.owner,area:f.primaryArea,primaryArea:f.primaryArea,secondaryArea:f.secondaryArea,observation:f.observation||'',description:f.observation||'',progress:0,spent:0};
   if(firebase){try{const {collection,doc,writeBatch,serverTimestamp}=firebase.firestoreSdk,objectRef=doc(collection(firebase.db,'objects')),eventRef=doc(collection(firebase.db,'events')),auditRef=doc(collection(firebase.db,'audit')),batch=writeBatch(firebase.db),objectData={code,title:o.title,product:o.product,objectType:o.objectType,priority:o.priority,budget:o.budget,plannedStart:o.start,plannedEnd:o.due,duration:o.duration,status:o.status,interventionType:o.interventionType,ownerName:o.owner,area:o.area,primaryArea:o.primaryArea,secondaryArea:o.secondaryArea,observation:o.observation,description:o.description,progress:0,spent:0,active:true,createdBy:session.id,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};batch.set(objectRef,objectData);batch.set(eventRef,{objectId:objectRef.id,objectCode:code,eventType:'Criação',description:'Objeto cadastrado no sistema',createdBy:session.id,createdByName:session.name,eventAt:serverTimestamp()});batch.set(auditRef,{userId:session.id,userName:session.name,action:'CREATE',entity:'objects',recordId:objectRef.id,newData:objectData,createdAt:serverTimestamp()});await batch.commit();o.dbId=objectRef.id}catch(error){return toast('Erro ao cadastrar objeto: '+error.message)}}
   state.objects.unshift(o);state.events.unshift({id:crypto.randomUUID(),objectId:o.id,date:new Date().toLocaleString('sv-SE').slice(0,16),type:'Criação',text:'Objeto cadastrado no sistema',user:session.name});save();closeModal();toast('Objeto cadastrado com sucesso.');openObject(o.id)
 };
+
+const openBaseModal=modal;
+modal=function(html){
+  openBaseModal(html);const root=document.getElementById('modal');if(!root)return;
+  setupUppercaseDescriptions(root);root.querySelectorAll('input[name="budget"],input[data-currency]').forEach(setupBrazilianCurrencyInput)
+};
+
+function setupUppercaseDescriptions(root){
+  const fields=root.querySelectorAll('input:not([type]),input[type="text"],textarea');
+  fields.forEach(field=>{if(['uid'].includes(field.name)||field.classList.contains('search'))return;const upper=()=>{const start=field.selectionStart,end=field.selectionEnd;field.value=field.value.toLocaleUpperCase('pt-BR');if(start!==null)field.setSelectionRange(start,end)};upper();field.addEventListener('input',upper)})
+}
+
+function setupBrazilianCurrencyInput(input){
+  if(input.dataset.currencyReady)return;input.dataset.currencyReady='true';const numeric=Number(input.value||0);input.type='text';input.inputMode='numeric';input.removeAttribute('min');input.removeAttribute('step');
+  if(!input.closest('.currency-input')){const wrapper=document.createElement('div');wrapper.className='currency-input';input.parentNode.insertBefore(wrapper,input);wrapper.insertAdjacentHTML('afterbegin','<span>R$</span>');wrapper.appendChild(input)}
+  const format=()=>{const digits=input.value.replace(/\D/g,'');const value=Number(digits||0)/100;input.value=value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})};input.value=numeric.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});input.addEventListener('input',format);input.addEventListener('focus',()=>input.select())
+}
+
+function parseBrazilianCurrency(value){
+  const normalized=String(value??'0').replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',','.');const parsed=Number(normalized);return Number.isFinite(parsed)?parsed:0
+}
