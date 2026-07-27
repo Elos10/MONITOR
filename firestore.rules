@@ -14,7 +14,9 @@ service cloud.firestore {
     match /objects/{id} {
       allow read: if active();
       allow create: if canWrite() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if canWrite() && request.resource.data.createdAt == resource.data.createdAt;
+      allow update: if canWrite()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (request.resource.data.active == resource.data.active || roleIn(['administrador']));
       allow delete: if false;
     }
     match /activities/{id} {

@@ -121,7 +121,7 @@ function setupEditObjectButton(){
   if(view!=='detail'||!selected)return;
   const actions=document.querySelector('.page-head .actions'),newEvent=[...actions?.querySelectorAll('button')||[]].find(button=>button.textContent.includes('Novo andamento'));
   if(!actions||!newEvent||actions.querySelector('[data-edit-object]'))return;
-  newEvent.insertAdjacentHTML('beforebegin',`<button class="btn secondary" data-edit-object onclick="editObjectModal('${selected}')">Editar objeto</button>`)
+  newEvent.insertAdjacentHTML('beforebegin',`<button class="btn secondary" data-edit-object onclick="editObjectModal('${selected}')">Editar objeto</button>${session.role==='administrador'?`<button class="btn danger" data-delete-object onclick="confirmDeleteObject('${selected}')">Excluir</button>`:''}`)
 }
 
 function editObjectModal(id){
@@ -135,4 +135,17 @@ async function updateObject(ev,id){
   const f=Object.fromEntries(new FormData(ev.target)),before={title:o.title,area:o.area,owner:o.owner,status:o.status,priority:o.priority,start:o.start,due:o.due,budget:o.budget,product:o.product,description:o.description},changes={title:f.title,area:f.area,owner:f.owner,status:f.status,priority:f.priority,start:f.start,due:f.due,budget:+f.budget,product:f.product,description:f.description};
   if(firebase&&o.dbId){try{const {doc,collection,writeBatch,serverTimestamp}=firebase.firestoreSdk,batch=writeBatch(firebase.db),objectRef=doc(firebase.db,'objects',o.dbId),auditRef=doc(collection(firebase.db,'audit')),eventRef=doc(collection(firebase.db,'events'));batch.update(objectRef,{title:changes.title,area:changes.area,ownerName:changes.owner,status:changes.status,priority:changes.priority,plannedStart:changes.start,plannedEnd:changes.due,budget:changes.budget,product:changes.product,description:changes.description,updatedAt:serverTimestamp(),updatedBy:session.id});batch.set(eventRef,{objectId:o.dbId,objectCode:o.id,eventType:'Edição',description:'Dados principais do objeto atualizados',createdBy:session.id,createdByName:session.name,eventAt:serverTimestamp()});batch.set(auditRef,{userId:session.id,userName:session.name,action:'UPDATE',entity:'objects',recordId:o.dbId,oldData:before,newData:changes,createdAt:serverTimestamp()});await batch.commit()}catch(error){return toast('Erro ao atualizar objeto: '+error.message)}}
   Object.assign(o,changes);state.events.unshift({id:crypto.randomUUID(),objectId:o.id,date:new Date().toLocaleString('sv-SE').slice(0,16),type:'Edição',text:'Dados principais do objeto atualizados',user:session.name});save();closeModal();toast('Objeto atualizado com sucesso.');render()
+}
+
+function confirmDeleteObject(id){
+  if(session.role!=='administrador')return toast('Somente o Administrador pode excluir objetos.');
+  const o=state.objects.find(item=>item.id===id);if(!o)return toast('Objeto não encontrado.');
+  modal(`<div class="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteObjectTitle"><div class="delete-symbol">!</div><h2 id="deleteObjectTitle">OBJETO SERÁ EXCLUÍDO - CONFIRMA EXCLUSÃO?</h2><p>${esc(o.id)} · ${esc(o.title)}</p><div class="delete-actions"><button type="button" class="btn secondary" onclick="closeModal()">Não</button><button type="button" class="btn danger" onclick="deleteObject('${o.id}')">Sim</button></div></div>`)
+}
+
+async function deleteObject(id){
+  if(session.role!=='administrador')return toast('Somente o Administrador pode excluir objetos.');
+  const index=state.objects.findIndex(item=>item.id===id),o=state.objects[index];if(index<0||!o)return toast('Objeto não encontrado.');
+  if(firebase&&o.dbId){try{const {doc,collection,writeBatch,serverTimestamp}=firebase.firestoreSdk,batch=writeBatch(firebase.db),objectRef=doc(firebase.db,'objects',o.dbId),eventRef=doc(collection(firebase.db,'events')),auditRef=doc(collection(firebase.db,'audit'));batch.update(objectRef,{active:false,deletedAt:serverTimestamp(),deletedBy:session.id,updatedAt:serverTimestamp()});batch.set(eventRef,{objectId:o.dbId,objectCode:o.id,eventType:'Exclusão',description:'Objeto excluído pelo administrador',createdBy:session.id,createdByName:session.name,eventAt:serverTimestamp()});batch.set(auditRef,{userId:session.id,userName:session.name,action:'DELETE',entity:'objects',recordId:o.dbId,oldData:{code:o.id,title:o.title,active:true},newData:{active:false},createdAt:serverTimestamp()});await batch.commit()}catch(error){return toast('Erro ao excluir objeto: '+error.message)}}
+  state.objects.splice(index,1);state.events.unshift({id:crypto.randomUUID(),objectId:o.id,date:new Date().toLocaleString('sv-SE').slice(0,16),type:'Exclusão',text:'Objeto excluído pelo administrador',user:session.name});save();closeModal();selected=null;view='objects';toast('Objeto excluído com sucesso.');render()
 }
