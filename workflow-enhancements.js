@@ -157,6 +157,24 @@ objectModal=function(){
   modal(`<div class="modal-head"><h2>Novo objeto</h2><button class="icon-btn" onclick="closeModal()">✕</button></div><div class="notice">Preencha os dados na sequência abaixo. A duração será calculada automaticamente.</div><form class="form-grid object-create-form" onsubmit="addObject(event)"><div class="field span2"><label>1. Título do Objeto</label><input name="title" required></div><div class="field span2"><label>2. Produto / Entrega</label><input name="product" required></div><div class="field"><label>3. Tipo</label><select name="objectType" required><option>Projeto</option><option>Processo</option><option>Programa</option><option>Contrato</option><option>Aquisição</option></select></div><div class="field"><label>4. Prioridade</label><select name="priority" required><option>Baixa</option><option selected>Média</option><option>Alta</option></select></div><div class="field span2"><label>5. Orçamento previsto (em R$)</label><div class="currency-input"><span>R$</span><input type="number" name="budget" min="0" step="0.01" value="0" required></div></div><div class="field"><label>6. Previsão de Início</label><input type="date" name="start" onchange="calculateObjectDuration(this.form)" required></div><div class="field"><label>7. Previsão de Término</label><input type="date" name="due" onchange="calculateObjectDuration(this.form)" required></div><div class="field span2"><label>8. Duração (em dias)</label><output class="object-duration" id="objectDuration" aria-live="polite"><strong>—</strong><span>Informe as datas de início e término</span></output><input type="hidden" name="duration"></div><div class="field"><label>9. Status</label><select name="status" required><option>À iniciar</option><option>Em execução</option></select></div><div class="field"><label>10. Tipo de intervenção</label><select name="interventionType" required><option>Construção</option><option>Reforma</option><option>Licitação</option><option>Modernização</option></select></div><div class="field span2"><label>11. Responsável Principal</label><input name="owner" required></div><div class="field span2"><label>12. Área Principal</label><select name="primaryArea" required>${primaryAreas.map(area=>`<option>${area}</option>`).join('')}</select></div><div class="field span2"><label>13. Área Secundária</label><select name="secondaryArea" required>${secondaryAreas.map(area=>`<option>${area}</option>`).join('')}</select></div><div class="field span2"><label>14. Observação</label><textarea name="observation" rows="4"></textarea></div><div class="span2 actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">Cadastrar objeto</button></div></form>`)
 };
 
+const renderUnfilteredObjectModal=objectModal;
+objectModal=function(){
+  renderUnfilteredObjectModal();
+  const form=document.querySelector('#modal .object-create-form'),primary=form?.elements.primaryArea;if(!primary)return;
+  primary.addEventListener('change',()=>updateObjectSecondaryAreas(primary));
+  updateObjectSecondaryAreas(primary)
+};
+
+function updateObjectSecondaryAreas(primarySelect){
+  const all=['Educação Infantil','Educação Fundamental','DETIC','Inspeção','Núcleo de Avaliação','Arte e Cultura','CREI','CEMEA Boa Vista','CEU das Artes','Biblioteca','Infraestrutura','Recursos Humanos','Patrimônio','Transporte','Nutrição','Programas Federais','Monitoramento de Contratos','Planejamento'],byArea={
+    'Diretoria de Ensino':['Educação Infantil','Educação Fundamental','DETIC','Inspeção','Núcleo de Avaliação'],
+    'Diretoria de Apoio à Educação Básica':['Arte e Cultura','CREI','CEMEA Boa Vista','CEU das Artes','Biblioteca'],
+    'Diretoria de Logística':['Infraestrutura','Recursos Humanos','Patrimônio','Transporte','Nutrição'],
+    'Diretoria de Planejamento Gestão e Finanças':['Programas Federais','Monitoramento de Contratos','Planejamento']
+  },secondary=primarySelect.form?.elements.secondaryArea,options=byArea[primarySelect.value]||all,current=secondary?.value;
+  if(!secondary)return;secondary.innerHTML=options.map(area=>`<option value="${esc(area)}" ${current===area?'selected':''}>${esc(area)}</option>`).join('')
+}
+
 function calculateObjectDuration(form){
   const start=form?.elements.start,due=form?.elements.due,duration=form?.elements.duration,output=document.getElementById('objectDuration');if(!start||!due||!duration||!output)return null;
   if(!start.value||!due.value){duration.value='';due.setCustomValidity('');output.classList.remove('invalid');output.innerHTML='<strong>—</strong><span>Informe as datas de início e término</span>';return null}
