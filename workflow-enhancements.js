@@ -28,12 +28,19 @@ function assignmentNotice(){
 }
 
 const baseRender=render;
-render=function(){baseRender();setupLoginLogo();if(session){const content=document.querySelector('.content');if(content)content.insertAdjacentHTML('afterbegin',assignmentNotice());setupNotificationBell();setupEditObjectButton()}};
+render=function(){baseRender();setupLoginLogo();if(session){const content=document.querySelector('.content');if(content)content.insertAdjacentHTML('afterbegin',assignmentNotice());setupNotificationBell();setupEditObjectButton();setupObjectDetailSummary()}};
 
 function setupLoginLogo(){
   const seal=document.querySelector('.login .seal');if(!seal)return;
   seal.innerHTML='<img src="assets/logo_semed.jpeg" alt="Secretaria de Educação de Uberaba">';
   seal.classList.add('semed-logo')
+}
+
+function setupObjectDetailSummary(){
+  if(view!=='detail'||!selected)return;const o=state.objects.find(item=>item.id===selected),summary=document.querySelector('.detail-grid .summary');if(!o||!summary||summary.dataset.enhanced)return;
+  summary.dataset.enhanced='true';summary.classList.add('detail-summary-enhanced');const cards=[...summary.children],byLabel=label=>cards.find(card=>card.querySelector('span')?.textContent.trim()===label),execution=byLabel('Execução física'),deadline=byLabel('Prazo final'),product=byLabel('Produto / Entrega');
+  execution?.classList.add('summary-compact','summary-progress');deadline?.classList.add('summary-compact','summary-deadline');product?.classList.add('summary-product');
+  if(deadline){const start=document.createElement('div');start.className='summary-compact summary-start';start.innerHTML=`<span>Data de Início</span><strong>${date(o.start)}</strong>`;deadline.insertAdjacentElement('beforebegin',start)}
 }
 
 function openAssignments(){
