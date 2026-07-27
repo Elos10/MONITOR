@@ -245,3 +245,16 @@ function buildReport(type){
 
 function openReport(type,printAfter=false){const report=buildReport(type);modal(`<div class="modal-head report-screen-actions"><div><span class="eyebrow">Pré-visualização</span><h2>${esc(report.title)}</h2></div><div class="actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" onclick="window.print()">Imprimir</button></div></div><div class="report-print-shell"><section class="print-report" id="printReport">${report.html}</section></div>`);if(printAfter)setTimeout(()=>window.print(),120)}
 function printReport(type){openReport(type,true)}
+
+let selectedTimelineObject=null;
+const navigateBase=go;
+go=function(target){if(target==='timeline')selectedTimelineObject=null;navigateBase(target)};
+
+timelineView=function(){
+  if(!selectedTimelineObject)return head('Histórico permanente','Timeline por objeto','Selecione o número do objeto para consultar seu histórico completo.')+`<section class="timeline-object-grid" aria-label="Objetos disponíveis">${state.objects.map(o=>`<button class="timeline-object-card" onclick="openObjectTimeline('${o.id}')"><span>${esc(o.id)}</span></button>`).join('')||'<div class="empty">NENHUM OBJETO CADASTRADO.</div>'}</section>`;
+  const o=state.objects.find(item=>item.id===selectedTimelineObject);if(!o){selectedTimelineObject=null;return timelineView()}const events=state.events.filter(e=>e.objectId===o.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return head('Timeline do objeto',o.id,esc(o.title),`<button class="btn secondary" onclick="backToTimelineObjects()">← Voltar aos objetos</button><button class="btn" onclick="eventModal('${o.id}')">+ Novo andamento</button>`)+`<section class="panel object-timeline-panel"><div class="panel-head"><div><h2>${esc(o.id)}</h2><small>${events.length} registro${events.length===1?'':'s'} no histórico</small></div><span class="pill ${statusClass(o.status)}">${esc(o.status)}</span></div><div class="timeline">${events.map(e=>`<article class="event"><div class="event-title-row"><strong>${esc(e.type)}</strong>${e.status?`<span class="pill ${e.status==='finalizado'?'green':'blue'}">${esc(eventStatusLabel(e.status))}</span>`:''}</div><p>${esc(e.text||e.productDelivery||'SEM DESCRIÇÃO')}</p>${e.productDelivery?`<div class="timeline-detail"><span>PRODUTO / ENTREGA</span><strong>${esc(e.productDelivery)}</strong></div>`:''}${e.assignedToName?`<div class="timeline-detail"><span>DIRECIONADO PARA</span><strong>${esc(e.assignedToName)}</strong></div>`:''}${eventDatesHtml(e)}<small>${esc(e.date)} · ${esc(e.user)}</small></article>`).join('')||'<div class="empty">ESTE OBJETO AINDA NÃO POSSUI REGISTROS NA TIMELINE.</div>'}</div></section>`
+};
+
+function openObjectTimeline(id){selectedTimelineObject=id;render();window.scrollTo({top:0,behavior:'smooth'})}
+function backToTimelineObjects(){selectedTimelineObject=null;render();window.scrollTo({top:0,behavior:'smooth'})}
