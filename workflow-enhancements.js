@@ -5,8 +5,9 @@ loadRemoteState=async function(){
   if(!firebase)return;
   try{
     const {collection,getDocs}=firebase.firestoreSdk;
-    const [usersSnap,eventsSnap,objectsSnap]=await Promise.all([getDocs(collection(firebase.db,'users')),getDocs(collection(firebase.db,'events')),getDocs(collection(firebase.db,'objects'))]);
+    const [usersSnap,eventsSnap,objectsSnap,documentsSnap]=await Promise.all([getDocs(collection(firebase.db,'users')),getDocs(collection(firebase.db,'events')),getDocs(collection(firebase.db,'objects')),getDocs(collection(firebase.db,'documents'))]);
     state.users=usersSnap.docs.map(d=>({id:d.id,...d.data()}));
+    state.documents=documentsSnap.docs.map(d=>({id:d.id,...d.data()}));
     const remoteObjects=new Map(objectsSnap.docs.map(d=>[d.id,d.data()]));
     state.objects=state.objects.map(o=>{const r=remoteObjects.get(o.dbId)||{};return{...o,objectType:r.objectType||o.objectType||'',duration:Number(r.duration??o.duration??0),interventionType:r.interventionType||o.interventionType||'',primaryArea:r.primaryArea||r.area||o.primaryArea||o.area,secondaryArea:r.secondaryArea||o.secondaryArea||'',observation:r.observation||o.observation||o.description||''}});
     const remote=new Map(eventsSnap.docs.map(d=>[d.id,d.data()]));
@@ -28,7 +29,7 @@ function assignmentNotice(){
 }
 
 const baseRender=render;
-render=function(){baseRender();setupLoginLogo();if(session){const content=document.querySelector('.content');if(content)content.insertAdjacentHTML('afterbegin',assignmentNotice());setupNotificationBell();setupEditObjectButton();setupObjectDetailSummary()}};
+render=function(){baseRender();setupLoginLogo();if(session){const content=document.querySelector('.content');if(content)content.insertAdjacentHTML('afterbegin',assignmentNotice());setupNotificationBell();setupEditObjectButton();setupObjectDetailSummary();setupObjectDetailTabs()}};
 
 function setupLoginLogo(){
   const seal=document.querySelector('.login .seal');if(!seal)return;
@@ -41,6 +42,24 @@ function setupObjectDetailSummary(){
   summary.dataset.enhanced='true';summary.classList.add('detail-summary-enhanced');const cards=[...summary.children],byLabel=label=>cards.find(card=>card.querySelector('span')?.textContent.trim()===label),execution=byLabel('Execução física'),deadline=byLabel('Prazo final'),product=byLabel('Produto / Entrega');
   execution?.classList.add('summary-compact','summary-progress');deadline?.classList.add('summary-compact','summary-deadline');product?.classList.add('summary-product');
   if(deadline){const start=document.createElement('div');start.className='summary-compact summary-start';start.innerHTML=`<span>Data de Início</span><strong>${date(o.start)}</strong>`;deadline.insertAdjacentElement('beforebegin',start)}
+}
+
+function setupObjectDetailTabs(){
+  if(view!=='detail'||!selected)return;const tabs=document.querySelector('.detail-grid .tabs'),panel=tabs?.closest('.panel');if(!tabs||!panel||tabs.dataset.functional)return;tabs.dataset.functional='true';
+  let sibling=tabs.nextElementSibling;while(sibling){const next=sibling.nextElementSibling;sibling.remove();sibling=next}
+  panel.insertAdjacentHTML('beforeend','<div class="detail-tab-content" id="detailTabContent"></div>');showDetailTab('activities',selected)
+}
+
+function detailTabData(objectId){return{activities:state.activities.filter(item=>item.objectId===objectId),costs:state.costs.filter(item=>item.objectId===objectId),documents:(state.documents||[]).filter(item=>item.objectCode===objectId||item.objectId===objectId||item.objectId===state.objects.find(o=>o.id===objectId)?.dbId)}}
+function emptyDetailTab(){return'<div class="detail-tab-empty">AINDA NÃO HÁ INFORMAÇÕES PARA ESTA OPÇÃO!</div>'}
+function safeDocumentUrl(value){try{const url=new URL(value,location.origin);return ['http:','https:'].includes(url.protocol)?url.href:''}catch{return''}}
+
+function showDetailTab(tabName,objectId){
+  const tabs=document.querySelector('.detail-grid .tabs'),content=document.getElementById('detailTabContent');if(!tabs||!content)return;const data=detailTabData(objectId),labels={activities:`Atividades (${data.activities.length})`,costs:`Custos (${data.costs.length})`,documents:`Documentos (${data.documents.length})`};
+  tabs.innerHTML=Object.entries(labels).map(([key,label])=>`<button type="button" class="${tabName===key?'active':''}" onclick="showDetailTab('${key}','${objectId}')">${label}</button>`).join('');
+  if(tabName==='activities')content.innerHTML=data.activities.length?`<div class="detail-list">${data.activities.map(a=>`<article><div><strong>${esc(a.title)}</strong><small>${esc(a.owner)}</small></div><span class="pill ${statusClass(a.status)}">${esc(a.status)} · ${Number(a.progress||0)}%</span></article>`).join('')}</div>`:emptyDetailTab();
+  else if(tabName==='costs')content.innerHTML=data.costs.length?`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Categoria</th><th>Fornecedor</th><th>Valor</th></tr></thead><tbody>${data.costs.map(c=>`<tr><td>${date(c.date)}</td><td>${esc(c.category)}</td><td>${esc(c.supplier)}</td><td><strong>${money(c.value)}</strong></td></tr>`).join('')}</tbody></table></div>`:emptyDetailTab();
+  else content.innerHTML=data.documents.length?`<div class="detail-list documents-list">${data.documents.map(d=>{const documentUrl=safeDocumentUrl(d.downloadURL||d.url);return`<article><div><strong>${esc(d.fileName||d.name||d.title||'DOCUMENTO')}</strong><small>${esc(d.category||d.contentType||'ARQUIVO')} ${d.uploadedByName?'· '+esc(d.uploadedByName):''}</small></div>${documentUrl?`<a class="btn secondary" href="${esc(documentUrl)}" target="_blank" rel="noopener">Abrir</a>`:'<span class="pill blue">REGISTRADO</span>'}</article>`}).join('')}</div>`:emptyDetailTab()
 }
 
 function openAssignments(){
