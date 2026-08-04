@@ -1,10 +1,10 @@
-// Copie este arquivo para firebase-config.js e substitua os valores pelos dados
-// exibidos em Firebase Console > Configurações do projeto > Seus aplicativos > Web.
+// Configuração exclusiva do NOVO projeto.
+// Copie para firebase-config.js apenas para testes locais e substitua todos os valores.
 window.SEMED_FIREBASE_CONFIG = {
-  apiKey: "SUA_FIREBASE_API_KEY",
-  authDomain: "SEU_PROJECT_ID.firebaseapp.com",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "SEU_FIREBASE_MESSAGING_SENDER_ID",
-  appId: "SEU_FIREBASE_APP_ID"
+  apiKey: "NOVA_FIREBASE_API_KEY",
+  authDomain: "NOVO_PROJECT_ID.firebaseapp.com",
+  projectId: "NOVO_PROJECT_ID",
+  storageBucket: "BUCKET_EXATO_DO_NOVO_PROJETO",
+  messagingSenderId: "NOVO_MESSAGING_SENDER_ID",
+  appId: "NOVO_FIREBASE_APP_ID"
 };

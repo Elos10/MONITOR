@@ -1,40 +1,27 @@
 # Monitoramento e Controle SEMED
 
-Aplicação institucional integrada ao Firebase Authentication, Cloud Firestore, Cloud Storage, Cloud Functions e Firebase Hosting.
+Aplicação institucional integrada a um novo projeto Firebase: Authentication, Cloud Firestore, Cloud Storage, Cloud Functions e Firebase Hosting.
 
-## Configuração Web
+## Configuração do novo projeto
 
-Copie `firebase-config.example.js` para `firebase-config.js` e informe os valores do aplicativo Web exibidos no Firebase Console. O arquivo real é ignorado pelo Git.
+As credenciais antigas não são utilizadas. O deploy exige estes sete GitHub Actions Secrets:
 
-Ative no Console:
+- `FIREBASE_NEW_PROJECT_ID`
+- `FIREBASE_NEW_SERVICE_ACCOUNT`
+- `FIREBASE_NEW_API_KEY`
+- `FIREBASE_NEW_AUTH_DOMAIN`
+- `FIREBASE_NEW_STORAGE_BUCKET`
+- `FIREBASE_NEW_APP_ID`
+- `FIREBASE_NEW_MESSAGING_SENDER_ID`
 
-- Authentication com provedor E-mail/Senha;
-- Cloud Firestore;
-- Cloud Storage;
-- Firebase Hosting;
-- Cloud Functions.
+Use somente valores pertencentes ao mesmo projeto Firebase. Em `FIREBASE_NEW_SERVICE_ACCOUNT`, cole o JSON integral da nova conta de serviço — nunca um caminho local.
 
-## Administrador inicial
+O procedimento completo está em [CONFIGURACAO_FIREBASE.md](CONFIGURACAO_FIREBASE.md).
 
-Crie o primeiro usuário no Firebase Authentication e um documento `users/{UID}` no Firestore:
+## Configuração local
 
-```json
-{
-  "fullName": "Administrador SEMED",
-  "email": "seu-email@dominio.gov.br",
-  "role": "administrador",
-  "active": true
-}
-```
+Copie `firebase-config.example.js` para `firebase-config.js` e preencha os valores exibidos em **Firebase Console > Configurações do projeto > Geral > Seus aplicativos**. O arquivo com valores reais é ignorado pelo Git.
 
-## GitHub Actions Secrets
+## Implantação
 
-Configure em **Settings > Secrets and variables > Actions**:
-
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_SERVICE_ACCOUNT`
-- `FIREBASE_API_KEY`
-- `FIREBASE_APP_ID`
-- `FIREBASE_MESSAGING_SENDER_ID`
-
-`FIREBASE_SERVICE_ACCOUNT` deve receber o conteúdo JSON completo da conta de serviço, nunca um caminho do Windows.
+O workflow `.github/workflows/firebase-hosting.yml` é executado em push para `main` ou manualmente. Antes de publicar, ele valida se todos os dados e a chave privada pertencem ao novo projeto.

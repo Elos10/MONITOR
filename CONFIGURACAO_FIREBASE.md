@@ -1,85 +1,76 @@
-# Configuração Firebase — Monitoramento e Controle SEMED
+# Nova configuração Firebase — Monitoramento e Controle SEMED
 
-## 1. Serviços que devem ser ativados
+Esta configuração é exclusiva para um novo projeto Firebase. Nenhuma credencial anterior é usada pelo workflow.
 
-No Firebase Console, ative:
+## 1. Criar e preparar o novo projeto
 
-1. **Authentication > Sign-in method > E-mail/Senha**;
-2. **Cloud Firestore** em modo nativo;
-3. **Cloud Storage**;
-4. **Firebase Hosting**;
-5. **Cloud Functions**.
+No Firebase Console:
 
-## 2. Chaves do aplicativo Web
+1. Crie o novo projeto e anote o **ID do projeto**.
+2. Em **Configurações do projeto > Geral**, registre um novo aplicativo Web.
+3. Ative **Authentication > E-mail/senha**.
+4. Crie o **Cloud Firestore** em modo nativo.
+5. Ative **Cloud Storage**, **Hosting** e **Cloud Functions**.
+6. Se o Console solicitar, vincule uma conta de faturamento para usar Cloud Functions.
 
-Abra **Configurações do projeto > Geral > Seus aplicativos > Aplicativo Web** e copie estes valores do objeto `firebaseConfig`:
+## 2. Criar uma nova conta de serviço
 
-| Chave do Firebase | Uso local | Secret no GitHub |
-|---|---|---|
-| `apiKey` | `apiKey` em `firebase-config.js` | `FIREBASE_API_KEY` |
-| `authDomain` | `authDomain` | Gerado com `FIREBASE_PROJECT_ID` |
-| `projectId` | `projectId` | `FIREBASE_PROJECT_ID` |
-| `storageBucket` | `storageBucket` | Gerado com `FIREBASE_PROJECT_ID` |
-| `messagingSenderId` | `messagingSenderId` | `FIREBASE_MESSAGING_SENDER_ID` |
-| `appId` | `appId` | `FIREBASE_APP_ID` |
+Em **Configurações do projeto > Contas de serviço > Gerar nova chave privada**, gere e baixe um JSON pertencente ao novo projeto.
 
-Copie `firebase-config.example.js` para `firebase-config.js`. Esse arquivo real não deve ser enviado ao GitHub.
+Não reutilize o JSON do projeto anterior. O conteúdo deve possuir `type`, `project_id`, `private_key_id`, `private_key` e `client_email`. Guarde o arquivo fora do repositório.
 
-## 3. Secrets obrigatórios do GitHub
+## 3. Remover os Secrets antigos
 
-Em **GitHub > Settings > Secrets and variables > Actions > New repository secret**, crie exatamente:
+No GitHub, acesse **Settings > Secrets and variables > Actions** e exclua, se existirem:
 
-### `FIREBASE_PROJECT_ID`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_SERVICE_ACCOUNT`
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_APP_ID`
+- `FIREBASE_MESSAGING_SENDER_ID`
 
-O identificador do projeto, sem URL. Exemplo: `monitor-semed`.
+## 4. Criar os sete novos Secrets
 
-### `FIREBASE_API_KEY`
+Crie exatamente estes **Repository secrets**:
 
-O valor de `apiKey` do aplicativo Web.
+| Secret novo | Valor exato |
+|---|---|
+| `FIREBASE_NEW_PROJECT_ID` | `projectId` do novo aplicativo Web |
+| `FIREBASE_NEW_SERVICE_ACCOUNT` | conteúdo integral do novo JSON da conta de serviço |
+| `FIREBASE_NEW_API_KEY` | `apiKey` do novo aplicativo Web |
+| `FIREBASE_NEW_AUTH_DOMAIN` | `authDomain` do novo aplicativo Web |
+| `FIREBASE_NEW_STORAGE_BUCKET` | `storageBucket` do novo aplicativo Web |
+| `FIREBASE_NEW_APP_ID` | `appId` do novo aplicativo Web |
+| `FIREBASE_NEW_MESSAGING_SENDER_ID` | `messagingSenderId` do novo aplicativo Web |
 
-### `FIREBASE_APP_ID`
+Em `FIREBASE_NEW_SERVICE_ACCOUNT`, cole o JSON completo, começando em `{` e terminando em `}`. Não informe o caminho de Downloads e não acrescente aspas ao redor do JSON.
 
-O valor de `appId` do aplicativo Web. Exemplo de formato: `1:123456789:web:abcdef123456`.
+O `project_id` dentro do JSON deve ser idêntico ao valor de `FIREBASE_NEW_PROJECT_ID`. A chave privada também precisa estar ativa no novo projeto; o workflow faz essa validação antes de implantar.
 
-### `FIREBASE_MESSAGING_SENDER_ID`
+## 5. Permissões da conta de serviço
 
-O valor numérico de `messagingSenderId`.
+Conceda à conta usada no deploy as permissões necessárias para Firebase Hosting, Firestore, Storage e Functions. Para a primeira implantação, a forma mais simples é usar a conta de serviço gerada pelo próprio Firebase para o projeto. Caso a organização aplique privilégios mínimos, o administrador do Google Cloud deve conceder os papéis equivalentes aos produtos implantados.
 
-### `FIREBASE_SERVICE_ACCOUNT`
+## 6. Administrador inicial
 
-O conteúdo integral do arquivo JSON baixado da conta de serviço. Deve começar com `{` e conter, entre outras, as chaves:
-
-```json
-{
-  "type": "service_account",
-  "project_id": "SEU_PROJECT_ID",
-  "private_key_id": "...",
-  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "...@SEU_PROJECT_ID.iam.gserviceaccount.com",
-  "client_id": "...",
-  "token_uri": "https://oauth2.googleapis.com/token"
-}
-```
-
-Informe o JSON completo no Secret. Não informe `Downloads`, caminho de arquivo, aspas externas adicionais ou JSON convertido manualmente.
-
-## 4. Administrador inicial
-
-1. Em **Authentication > Users**, crie o primeiro usuário.
-2. Copie o UID.
-3. No Firestore, crie o documento `users/{UID}` com:
+1. Em **Authentication > Users**, crie o primeiro usuário e copie seu UID.
+2. No Firestore, crie `users/{UID}` com:
 
 ```json
 {
-  "fullName": "Administrador SEMED",
+  "fullName": "ADMINISTRADOR SEMED",
   "email": "administrador@dominio.gov.br",
   "role": "administrador",
   "active": true
 }
 ```
 
-Depois do primeiro acesso, o administrador poderá criar e editar os demais usuários na própria aplicação.
+## 7. Publicar
 
-## 5. Publicação
+Envie as alterações para a branch `main` ou execute manualmente **Actions > Publicar novo projeto Firebase > Run workflow**.
 
-O workflow `.github/workflows/firebase-hosting.yml` valida as cinco chaves, gera `firebase-config.js` somente durante o deploy, autentica com a conta de serviço e publica Hosting, Functions, regras, índices e Storage.
+O workflow valida os sete Secrets, confirma criptograficamente a nova chave, gera `firebase-config.js` apenas no runner e publica Hosting, Functions, regras e índices do Firestore e regras do Storage.
+
+Para testes locais, copie `firebase-config.example.js` para `firebase-config.js` e preencha os seis valores do aplicativo Web. `firebase-config.js`, `.firebaserc` e arquivos de conta de serviço estão ignorados pelo Git.

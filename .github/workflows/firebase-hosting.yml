@@ -1,4 +1,4 @@
-name: Publicar no Firebase
+name: Publicar novo projeto Firebase
 
 on:
   push:
@@ -19,49 +19,45 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validar chaves obrigatórias
+      - name: Validar configuração do novo projeto
         env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          NEW_PROJECT_ID: ${{ secrets.FIREBASE_NEW_PROJECT_ID }}
+          NEW_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_NEW_SERVICE_ACCOUNT }}
+          NEW_API_KEY: ${{ secrets.FIREBASE_NEW_API_KEY }}
+          NEW_AUTH_DOMAIN: ${{ secrets.FIREBASE_NEW_AUTH_DOMAIN }}
+          NEW_STORAGE_BUCKET: ${{ secrets.FIREBASE_NEW_STORAGE_BUCKET }}
+          NEW_APP_ID: ${{ secrets.FIREBASE_NEW_APP_ID }}
+          NEW_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_NEW_MESSAGING_SENDER_ID }}
         run: |
-          node -e "for(const k of ['FIREBASE_PROJECT_ID','FIREBASE_SERVICE_ACCOUNT','FIREBASE_API_KEY','FIREBASE_APP_ID','FIREBASE_MESSAGING_SENDER_ID'])if(!process.env[k]){console.error('Configure o secret '+k);process.exitCode=1}"
-          node -e "JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT); console.log('Conta de serviço válida')"
+          node -e "const required=['NEW_PROJECT_ID','NEW_SERVICE_ACCOUNT','NEW_API_KEY','NEW_AUTH_DOMAIN','NEW_STORAGE_BUCKET','NEW_APP_ID','NEW_MESSAGING_SENDER_ID'];const missing=required.filter(k=>!process.env[k]);if(missing.length){console.error('Configure os novos Secrets: '+missing.join(', '));process.exit(1)}const c=JSON.parse(process.env.NEW_SERVICE_ACCOUNT);if(c.type!=='service_account'||!c.private_key||!c.private_key_id||!c.client_email)throw new Error('FIREBASE_NEW_SERVICE_ACCOUNT não contém uma conta de serviço JSON válida');if(c.project_id!==process.env.NEW_PROJECT_ID)throw new Error('O project_id da nova conta de serviço não corresponde a FIREBASE_NEW_PROJECT_ID');if(!process.env.NEW_AUTH_DOMAIN.includes(c.project_id))throw new Error('FIREBASE_NEW_AUTH_DOMAIN não pertence ao novo projeto');if(!process.env.NEW_STORAGE_BUCKET.includes(c.project_id))throw new Error('FIREBASE_NEW_STORAGE_BUCKET não pertence ao novo projeto');console.log('Novo projeto validado: '+c.project_id)"
 
-      - name: Preparar credencial ADC do Firebase
+      - name: Preparar credencial exclusiva do novo projeto
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          NEW_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_NEW_SERVICE_ACCOUNT }}
+          NEW_PROJECT_ID: ${{ secrets.FIREBASE_NEW_PROJECT_ID }}
         run: |
-          node -e "const fs=require('fs');const path=require('path');const c=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);if(c.type!=='service_account'||!c.private_key||!c.private_key_id||!c.client_email){console.error('FIREBASE_SERVICE_ACCOUNT não é um JSON de conta de serviço válido');process.exit(1)}if(c.project_id!==process.env.FIREBASE_PROJECT_ID){console.error('O project_id da conta de serviço não corresponde ao FIREBASE_PROJECT_ID');process.exit(1)}c.private_key=c.private_key.replace(/\\n/g,'\n').replace(/\r/g,'').trim()+'\n';const file=path.join(process.env.RUNNER_TEMP,'firebase-service-account.json');fs.writeFileSync(file,JSON.stringify(c));fs.appendFileSync(process.env.GITHUB_ENV,'GOOGLE_APPLICATION_CREDENTIALS='+file+'\nGOOGLE_CLOUD_PROJECT='+c.project_id+'\nGCLOUD_PROJECT='+c.project_id+'\n');console.log('ADC preparada para '+c.project_id)"
+          node -e "const fs=require('fs'),path=require('path');const c=JSON.parse(process.env.NEW_SERVICE_ACCOUNT);c.private_key=c.private_key.replace(/\\n/g,'\n').replace(/\r/g,'').trim()+'\n';const file=path.join(process.env.RUNNER_TEMP,'firebase-new-project-service-account.json');fs.writeFileSync(file,JSON.stringify(c));fs.appendFileSync(process.env.GITHUB_ENV,'GOOGLE_APPLICATION_CREDENTIALS='+file+'\nGOOGLE_CLOUD_PROJECT='+c.project_id+'\nGCLOUD_PROJECT='+c.project_id+'\nFIREBASE_DEPLOY_PROJECT='+c.project_id+'\n');console.log('Credencial preparada para '+c.client_email)"
 
-      - name: Validar assinatura da conta de serviço
+      - name: Validar chave exclusiva do novo projeto
         run: |
-          node -e "const fs=require('fs'),crypto=require('crypto');(async()=>{const c=JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS,'utf8'));const url=c.client_x509_cert_url||('https://www.googleapis.com/robot/v1/metadata/x509/'+encodeURIComponent(c.client_email));const response=await fetch(url);if(!response.ok)throw new Error('Não foi possível consultar as chaves públicas da conta de serviço');const certificates=await response.json(),certificate=certificates[c.private_key_id];if(!certificate)throw new Error('A private_key_id não está ativa para '+c.client_email+'. Gere uma nova chave JSON');const privatePublic=crypto.createPublicKey(c.private_key).export({type:'spki',format:'der'}),registeredPublic=new crypto.X509Certificate(certificate).publicKey.export({type:'spki',format:'der'});if(!privatePublic.equals(registeredPublic))throw new Error('A private_key não corresponde ao client_email/private_key_id. Substitua FIREBASE_SERVICE_ACCOUNT pelo JSON original completo');console.log('Assinatura confirmada para '+c.client_email)})().catch(error=>{console.error('::error::'+error.message);process.exit(1)})"
+          node -e "const fs=require('fs'),crypto=require('crypto');(async()=>{const c=JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS,'utf8'));const url=c.client_x509_cert_url||('https://www.googleapis.com/robot/v1/metadata/x509/'+encodeURIComponent(c.client_email));const response=await fetch(url);if(!response.ok)throw new Error('Não foi possível consultar a conta de serviço do novo projeto');const certificates=await response.json(),certificate=certificates[c.private_key_id];if(!certificate)throw new Error('A chave informada não está ativa no novo projeto. Gere outro JSON');const privatePublic=crypto.createPublicKey(c.private_key).export({type:'spki',format:'der'}),registeredPublic=new crypto.X509Certificate(certificate).publicKey.export({type:'spki',format:'der'});if(!privatePublic.equals(registeredPublic))throw new Error('A chave privada não corresponde à conta de serviço do novo projeto');console.log('Chave do novo projeto confirmada')})().catch(error=>{console.error('::error::'+error.message);process.exit(1)})"
 
-      - name: Gerar configuração Web
+      - name: Gerar configuração Web do novo projeto
         env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          NEW_PROJECT_ID: ${{ secrets.FIREBASE_NEW_PROJECT_ID }}
+          NEW_API_KEY: ${{ secrets.FIREBASE_NEW_API_KEY }}
+          NEW_AUTH_DOMAIN: ${{ secrets.FIREBASE_NEW_AUTH_DOMAIN }}
+          NEW_STORAGE_BUCKET: ${{ secrets.FIREBASE_NEW_STORAGE_BUCKET }}
+          NEW_APP_ID: ${{ secrets.FIREBASE_NEW_APP_ID }}
+          NEW_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_NEW_MESSAGING_SENDER_ID }}
         run: |
-          node -e "const fs=require('fs');const p=process.env.FIREBASE_PROJECT_ID;const c={apiKey:process.env.FIREBASE_API_KEY,authDomain:p+'.firebaseapp.com',projectId:p,storageBucket:p+'.firebasestorage.app',messagingSenderId:process.env.FIREBASE_MESSAGING_SENDER_ID,appId:process.env.FIREBASE_APP_ID};fs.writeFileSync('firebase-config.js','window.SEMED_FIREBASE_CONFIG = '+JSON.stringify(c,null,2)+';\n')"
+          node -e "const fs=require('fs');const c={apiKey:process.env.NEW_API_KEY,authDomain:process.env.NEW_AUTH_DOMAIN,projectId:process.env.NEW_PROJECT_ID,storageBucket:process.env.NEW_STORAGE_BUCKET,messagingSenderId:process.env.NEW_MESSAGING_SENDER_ID,appId:process.env.NEW_APP_ID};fs.writeFileSync('firebase-config.js','window.SEMED_FIREBASE_CONFIG = '+JSON.stringify(c,null,2)+';\n')"
 
-      - name: Instalar dependências
+      - name: Instalar ferramentas de implantação
         run: |
           npm install --prefix functions
           npm install --global firebase-tools
-
-      - name: Verificar Firebase CLI e autenticação ADC
-        run: |
           firebase --version
-          test -s "$GOOGLE_APPLICATION_CREDENTIALS"
-          node -e "const c=require(process.env.GOOGLE_APPLICATION_CREDENTIALS);console.log('Conta: '+c.client_email);console.log('Projeto: '+c.project_id)"
 
-      - name: Implantar
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: firebase deploy --only hosting,functions,firestore:rules,firestore:indexes,storage --project "$FIREBASE_PROJECT_ID" --non-interactive --debug
+      - name: Implantar no novo projeto
+        run: firebase deploy --only hosting,functions,firestore:rules,firestore:indexes,storage --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive --debug
