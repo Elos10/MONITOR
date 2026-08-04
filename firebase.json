@@ -3,7 +3,7 @@
     "public": ".",
     "ignore": [
       "firebase.json", ".firebaserc", "firestore.rules", "firestore.indexes.json",
-      "storage.rules", "README.md", "CONFIGURACAO_FIREBASE.md", ".git/**", ".github/**",
+      "storage.rules", "README.md", "CONFIGURACAO_FIREBASE.md", ".git/**", ".github/**", ".agents/**", ".codex/**",
       "functions/**", "node_modules/**", "outputs/**", "tools/**", "*.log", ".env*",
       "firebase-config.example.js", "*service-account*.json", "*service_account*.json",
       "*firebase-adminsdk*.json", "gha-creds-*.json", "*.inspect.ndjson"

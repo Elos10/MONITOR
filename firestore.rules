@@ -14,13 +14,18 @@ service cloud.firestore {
     }
     match /objects/{id} {
       allow read: if active();
-      allow create, update: if canWrite();
+      allow create: if canWrite() && request.resource.data.active == true;
+      allow update: if canWrite() && (request.resource.data.active == resource.data.active || admin());
       allow delete: if false;
     }
     match /events/{id} {
       allow read: if active();
       allow create: if canWrite();
-      allow update: if canWrite() && (resource.data.assignedTo == request.auth.uid || admin());
+      allow update: if admin() || (canWrite()
+        && resource.data.get('assignedTo', '') == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'assigneeNote', 'updatedAt', 'receivedAt', 'receivedBy', 'receivedByName'
+        ]));
       allow delete: if false;
     }
     match /activities/{id} {

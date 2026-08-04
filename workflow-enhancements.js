@@ -1,20 +1,19 @@
-document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="workflow-enhancements.css">');
-const baseLoadRemoteState=loadRemoteState;
 loadRemoteState=async function(){
-  await baseLoadRemoteState();
   if(!firebase)return;
   try{
     const {collection,getDocs}=firebase.firestoreSdk;
-    const [usersSnap,eventsSnap,objectsSnap,documentsSnap]=await Promise.all([getDocs(collection(firebase.db,'users')),getDocs(collection(firebase.db,'events')),getDocs(collection(firebase.db,'objects')),getDocs(collection(firebase.db,'documents'))]);
+    const [usersSnap,eventsSnap,objectsSnap,activitiesSnap,costsSnap,documentsSnap]=await Promise.all([getDocs(collection(firebase.db,'users')),getDocs(collection(firebase.db,'events')),getDocs(collection(firebase.db,'objects')),getDocs(collection(firebase.db,'activities')),getDocs(collection(firebase.db,'costs')),getDocs(collection(firebase.db,'documents'))]);
     state.users=usersSnap.docs.map(d=>({id:d.id,...d.data()}));
     state.documents=documentsSnap.docs.map(d=>({id:d.id,...d.data()}));
-    const remoteObjects=new Map(objectsSnap.docs.map(d=>[d.id,d.data()]));
-    state.objects=state.objects.map(o=>{const r=remoteObjects.get(o.dbId)||{};return{...o,objectType:r.objectType||o.objectType||'',duration:Number(r.duration??o.duration??0),interventionType:r.interventionType||o.interventionType||'',primaryArea:r.primaryArea||r.area||o.primaryArea||o.area,secondaryArea:r.secondaryArea||o.secondaryArea||'',observation:r.observation||o.observation||o.description||''}});
-    const remote=new Map(eventsSnap.docs.map(d=>[d.id,d.data()]));
-    state.events=state.events.map(e=>{const r=remote.get(e.dbId||e.id)||{};return{...e,productDelivery:r.productDelivery||'',responsible:r.responsible||'',area:r.area||'',observation:r.observation||'',assignedTo:r.assignedTo||'',assignedToName:r.assignedToName||'',assignedBy:r.assignedBy||r.createdBy||'',assignedByName:r.assignedByName||r.createdByName||'',receivedAt:r.receivedAt?.toDate?.().toISOString()||r.receivedAt||'',receivedBy:r.receivedBy||'',assigneeNote:r.assigneeNote||''}});
+    state.objects=objectsSnap.docs.map(d=>({dbId:d.id,...d.data()})).filter(o=>o.active!==false).map(o=>({id:o.code,dbId:o.dbId,title:o.title||'',product:o.product||'',objectType:o.objectType||'',priority:o.priority||'Média',budget:Number(o.budget||0),spent:Number(o.spent||0),start:o.plannedStart||'',due:o.plannedEnd||'',duration:Number(o.duration||0),status:o.status||'À iniciar',interventionType:o.interventionType||'',owner:o.ownerName||'',area:o.primaryArea||o.area||'',primaryArea:o.primaryArea||o.area||'',secondaryArea:o.secondaryArea||'',observation:o.observation||'',description:o.description||o.observation||'',progress:Number(o.progress||0)}));
+    state.events=eventsSnap.docs.map(d=>{const e=d.data();return{id:d.id,dbId:d.id,objectId:e.objectCode||'',date:firebaseDateTime(e.eventAt),type:e.eventType||'',status:e.status||'',text:e.description||'',user:e.createdByName||'',productDelivery:e.productDelivery||'',responsible:e.responsible||'',area:e.area||'',observation:e.observation||'',assignedTo:e.assignedTo||'',assignedToName:e.assignedToName||'',assignedBy:e.assignedBy||e.createdBy||'',assignedByName:e.assignedByName||e.createdByName||'',receivedAt:e.receivedAt?.toDate?.().toISOString()||e.receivedAt||'',receivedBy:e.receivedBy||'',assigneeNote:e.assigneeNote||'',hasForecast:!!e.hasForecast,forecastStart:e.forecastStart||'',forecastEnd:e.forecastEnd||'',forecastDays:e.forecastDays??null,hasExecution:!!e.hasExecution,executionStart:e.executionStart||'',executionEnd:e.executionEnd||'',executionDays:e.executionDays??null}}).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    state.activities=activitiesSnap.docs.map(d=>{const a=d.data();return{id:d.id,objectId:a.objectCode||'',title:a.title||'',owner:a.ownerName||'',status:a.status||'',progress:Number(a.progress||0)}});
+    state.costs=costsSnap.docs.map(d=>{const c=d.data();return{id:d.id,objectId:c.objectCode||'',date:c.occurredOn||'',category:c.category||'',supplier:c.supplier||'',value:Number(c.amount||0)}}).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     recalculateAllProgress();save();
-  }catch(error){toast('Falha ao carregar as atribuições: '+error.message)}
+  }catch(error){toast('Falha ao carregar os dados do Firebase: '+error.message);throw error}
 };
+
+function firebaseDateTime(value){const dateValue=value?.toDate?.()||value;if(!dateValue)return'';const parsed=dateValue instanceof Date?dateValue:new Date(dateValue);return Number.isNaN(parsed.getTime())?'':parsed.toLocaleString('sv-SE').slice(0,16)}
 
 function progressEvents(objectId){return state.events.filter(e=>e.objectId===objectId&&e.status)}
 function calculateProgress(objectId){const events=progressEvents(objectId);return events.length?Math.round(events.filter(e=>e.status==='finalizado').length/events.length*100):0}
@@ -238,6 +237,12 @@ function parseBrazilianCurrency(value){
 
 importView=function(){
   return head('Integrações','Importar planilha','Importe objetos com os campos e valores reconhecidos pelo sistema.')+`<section class="panel import-panel"><div class="notice"><strong>Importação segura:</strong> divergências são apresentadas antes da confirmação e nenhum histórico existente é apagado.</div><article class="import-template-card"><div class="import-template-icon" aria-hidden="true">XLSX</div><div><span class="eyebrow">MODELO OFICIAL SEMED</span><h2>Baixe a planilha modelo antes de importar</h2><p>O arquivo contém todos os campos obrigatórios e opcionais, exemplo preenchido, cálculo automático da duração, listas de valores aceitos e as regras de relacionamento entre Área Principal e Área Secundária.</p><div class="template-features"><span>14 campos documentados</span><span>Valores com validação</span><span>Datas e moeda padronizadas</span></div></div><a class="btn template-download" href="assets/modelo-importacao-objetos-semed.xlsx" download="modelo-importacao-objetos-semed.xlsx" onclick="toast('Download da planilha modelo iniciado.')">↓ Baixar planilha modelo</a></article><div class="upload" onclick="fileInput.click()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();fileInput.click()}"><h2>Arraste sua planilha ou clique para selecionar</h2><p>Excel (.xlsx, .xls) ou CSV · validação e conciliação de duplicidades</p><button type="button" class="btn">Selecionar arquivo</button></div><div class="summary" style="margin-top:18px"><div><span>1. Envio</span><strong>Arquivo de origem</strong></div><div><span>2. Validação</span><strong>Mapeamento de colunas</strong></div><div><span>3. Conciliação</span><strong>Prévia e confirmação</strong></div></div></section>`
+};
+
+objectsView=function(){
+  const statusFilters=['À iniciar','Em execução','Concluído','Atrasado','Alta prioridade'];
+  const matchesStatus=o=>filter==='all'||(filter==='Concluído'?o.progress>=100:filter==='Atrasado'?Boolean(o.due)&&new Date(`${o.due}T23:59:59`)<new Date()&&o.progress<100:filter==='Alta prioridade'?o.priority==='Alta'&&o.progress<100:o.status===filter),matchesSearch=o=>JSON.stringify(o).toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')),list=state.objects.filter(o=>matchesStatus(o)&&matchesSearch(o));
+  return head('Carteira','Objetos SEMED','Cadastre, filtre e acompanhe todos os objetos institucionais.',`<button class="btn secondary" onclick="exportCSV()">↓ Exportar CSV</button><button class="btn" onclick="objectModal()">+ Novo objeto</button>`)+`<div class="panel"><div class="toolbar"><input class="search" aria-label="Buscar objetos" placeholder="Buscar na carteira..." value="${esc(query)}" oninput="query=this.value;render()"><select aria-label="Filtrar por status" onchange="filter=this.value;render()"><option value="all">Todos os status</option>${statusFilters.map(status=>`<option value="${status}" ${filter===status?'selected':''}>${status}</option>`).join('')}</select><button class="btn secondary" onclick="query='';filter='all';render()">Limpar filtros</button></div>${objectTable(list)}</div>`
 };
 
 const reportDefinitions=[
