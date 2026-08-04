@@ -141,7 +141,7 @@ function userEditor(uid=''){
 async function manageAccessUser(ev){
   ev.preventDefault();const data=Object.fromEntries(new FormData(ev.target)),payload={uid:data.uid||undefined,fullName:data.fullName,email:data.email,password:data.password||undefined,role:data.role,active:data.active==='on'};
   if(firebase){try{const callable=firebase.functionsSdk.httpsCallable(firebase.functions,'manageUser'),result=await callable(payload),user={id:result.data.uid,...result.data},index=state.users.findIndex(u=>u.id===user.id);index>=0?state.users.splice(index,1,user):state.users.push(user)}catch(error){return toast('Erro ao salvar usuário: '+(error.message||error))}}
-  else{const id=payload.uid||crypto.randomUUID(),user={id,fullName:payload.fullName,email:payload.email,role:payload.role,active:payload.active},index=state.users.findIndex(u=>u.id===id);index>=0?state.users.splice(index,1,user):state.users.push(user)}
+  else{const id=payload.uid||crypto.randomUUID(),index=state.users.findIndex(u=>u.id===id),current=index>=0?state.users[index]:{},user={id,fullName:payload.fullName,email:payload.email,password:payload.password||current.password,role:payload.role,active:payload.active};index>=0?state.users.splice(index,1,user):state.users.push(user)}
   save();closeModal();toast(payload.uid?'Usuário atualizado com sucesso.':'Usuário criado com sucesso.');render()
 }
 
