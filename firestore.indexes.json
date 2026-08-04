@@ -1,0 +1,9 @@
+{
+  "indexes": [
+    {"collectionGroup":"objects","queryScope":"COLLECTION","fields":[{"fieldPath":"active","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}]},
+    {"collectionGroup":"events","queryScope":"COLLECTION","fields":[{"fieldPath":"objectCode","order":"ASCENDING"},{"fieldPath":"eventAt","order":"DESCENDING"}]},
+    {"collectionGroup":"costs","queryScope":"COLLECTION","fields":[{"fieldPath":"objectCode","order":"ASCENDING"},{"fieldPath":"occurredOn","order":"DESCENDING"}]},
+    {"collectionGroup":"notificationReads","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"readAt","order":"DESCENDING"}]}
+  ],
+  "fieldOverrides": []
+}

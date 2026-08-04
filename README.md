@@ -1,24 +1,40 @@
 # Monitoramento e Controle SEMED
 
-Aplicação institucional para gestão de objetos, atividades, andamentos, custos, prazos, relatórios, importações e auditoria da SEMED.
+Aplicação institucional integrada ao Firebase Authentication, Cloud Firestore, Cloud Storage, Cloud Functions e Firebase Hosting.
 
-## Execução
+## Configuração Web
 
-O sistema é um front-end estático em HTML, CSS e JavaScript. Abra a pasta por meio de um servidor HTTP local e acesse pelo navegador.
+Copie `firebase-config.example.js` para `firebase-config.js` e informe os valores do aplicativo Web exibidos no Firebase Console. O arquivo real é ignorado pelo Git.
 
-Os dados e a sessão são mantidos localmente no navegador, sem integração com serviços externos.
+Ative no Console:
 
-### Acesso administrativo inicial
+- Authentication com provedor E-mail/Senha;
+- Cloud Firestore;
+- Cloud Storage;
+- Firebase Hosting;
+- Cloud Functions.
 
-- E-mail: `admin@semed.local`
-- Senha: `Admin@123`
+## Administrador inicial
 
-O administrador pode cadastrar usuários locais e atribuir os perfis `administrador`, `gabinete`, `assessoria`, `diretoria`, `departamento`, `secao` e `servidor`.
+Crie o primeiro usuário no Firebase Authentication e um documento `users/{UID}` no Firestore:
 
-## Arquivos principais
+```json
+{
+  "fullName": "Administrador SEMED",
+  "email": "seu-email@dominio.gov.br",
+  "role": "administrador",
+  "active": true
+}
+```
 
-- `index.html`: entrada da aplicação;
-- `app.js`: telas, estado e operações locais;
-- `workflow-enhancements.js`: funcionalidades complementares;
-- `styles.css` e arquivos CSS complementares: apresentação visual;
-- `assets/modelo-importacao-objetos-semed.xlsx`: modelo oficial para importação.
+## GitHub Actions Secrets
+
+Configure em **Settings > Secrets and variables > Actions**:
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_SERVICE_ACCOUNT`
+- `FIREBASE_API_KEY`
+- `FIREBASE_APP_ID`
+- `FIREBASE_MESSAGING_SENDER_ID`
+
+`FIREBASE_SERVICE_ACCOUNT` deve receber o conteúdo JSON completo da conta de serviço, nunca um caminho do Windows.

@@ -20,3 +20,15 @@ build/
 # Ambientes locais
 .env
 .env.*
+!.env.example
+
+# Firebase local e credenciais
+firebase-config.js
+.firebase/
+firebase-debug.log
+ui-debug.log
+gha-creds-*.json
+*service-account*.json
+*service_account*.json
+*firebase-adminsdk*.json
+FIREBASE_SERVICE_ACCOUNT*.json

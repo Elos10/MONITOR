@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function active() { return signedIn() && profile().data.active == true; }
+    function role() { return profile().data.role; }
+    function admin() { return active() && role() == 'administrador'; }
+    function canWrite() { return active() && role() in ['administrador','gabinete','assessoria','diretoria','departamento','secao','servidor']; }
+
+    match /users/{uid} {
+      allow read: if active();
+      allow write: if admin();
+    }
+    match /objects/{id} {
+      allow read: if active();
+      allow create, update: if canWrite();
+      allow delete: if false;
+    }
+    match /events/{id} {
+      allow read: if active();
+      allow create: if canWrite();
+      allow update: if canWrite() && (resource.data.assignedTo == request.auth.uid || admin());
+      allow delete: if false;
+    }
+    match /activities/{id} {
+      allow read: if active();
+      allow create, update: if canWrite();
+      allow delete: if admin();
+    }
+    match /costs/{id} {
+      allow read: if active();
+      allow create: if canWrite();
+      allow update, delete: if admin();
+    }
+    match /documents/{id} {
+      allow read: if active();
+      allow create, update: if canWrite();
+      allow delete: if admin();
+    }
+    match /notificationReads/{id} {
+      allow read: if active() && request.auth.uid == resource.data.userId;
+      allow create, update: if active() && request.auth.uid == request.resource.data.userId;
+      allow delete: if false;
+    }
+    match /audit/{id} {
+      allow read: if admin();
+      allow create: if canWrite();
+      allow update, delete: if false;
+    }
+    match /imports/{id} {
+      allow read, create: if canWrite();
+      allow update, delete: if admin();
+    }
+  }
+}

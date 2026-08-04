@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json", ".firebaserc", "firestore.rules", "firestore.indexes.json",
+      "storage.rules", "README.md", "CONFIGURACAO_FIREBASE.md", ".git/**", ".github/**",
+      "functions/**", "node_modules/**", "outputs/**", "tools/**", "*.log", ".env*",
+      "firebase-config.example.js", "*service-account*.json", "*service_account*.json",
+      "*firebase-adminsdk*.json", "gha-creds-*.json", "*.inspect.ndjson"
+    ],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": { "rules": "storage.rules" },
+  "functions": [{ "source": "functions", "codebase": "default", "runtime": "nodejs22" }]
+}

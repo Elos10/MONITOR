@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)); }
+    function active() { return signedIn() && userDoc().data.active == true; }
+    function admin() { return active() && userDoc().data.role == 'administrador'; }
+    function validUpload() {
+      return request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('(application/pdf|image/.*|application/vnd.openxmlformats-officedocument.*|application/msword|text/csv)');
+    }
+    match /documents/{objectId}/{fileName} {
+      allow read: if active();
+      allow create, update: if active() && validUpload();
+      allow delete: if admin();
+    }
+  }
+}
