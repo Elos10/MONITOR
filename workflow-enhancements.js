@@ -37,9 +37,10 @@ render=function(){baseRender();setupLoginLogo();if(session){const content=docume
 
 function setupLoginLogo(){
   const seal=document.querySelector('.login .seal');if(!seal)return;
-  seal.innerHTML='<img src="/assets/logo_semed.jpeg?v=20260805" alt="Secretaria Municipal de Educação de Uberaba" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="semed-logo-fallback" hidden><strong>SEMED</strong><small>SECRETARIA MUNICIPAL DE EDUCAÇÃO · UBERABA</small></span>';
+  seal.innerHTML='<img src="/assets/logo_semed.jpeg?v=20260805" alt="Secretaria Municipal de Educação de Uberaba" onerror="retryLoginLogo(this)"><span class="semed-logo-fallback" hidden><strong>SEMED</strong><small>SECRETARIA MUNICIPAL DE EDUCAÇÃO · UBERABA</small></span>';
   seal.classList.add('semed-logo')
 }
+function retryLoginLogo(image){if(!image.dataset.retry){image.dataset.retry='1';setTimeout(()=>{image.src='/assets/logo_semed.jpeg?reload='+Date.now()},250);return}image.hidden=true;image.nextElementSibling.hidden=false}
 
 function setupObjectDetailSummary(){
   if(view!=='detail'||!selected)return;const o=state.objects.find(item=>item.id===selected),summary=document.querySelector('.detail-grid .summary');if(!o||!summary||summary.dataset.enhanced)return;
