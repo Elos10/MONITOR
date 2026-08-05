@@ -41,3 +41,9 @@ button.assignment-alert{cursor:pointer}
 .login .seal.semed-logo{width:min(620px,92%);height:auto;min-height:150px;padding:0;overflow:hidden;border:0;border-radius:16px;background:#fff;box-shadow:0 18px 45px #0003}
 .login .seal.semed-logo img{display:block;width:100%;height:auto;max-height:320px;object-fit:contain}
 @media(max-width:760px){.login .seal.semed-logo{width:100%;min-height:auto}}
+.sidebar-footer{margin-top:auto;position:sticky;bottom:-22px;padding:0 0 22px;background:var(--navy);border-top:1px solid #ffffff20;z-index:2}
+.sidebar-footer .user-card{margin-top:0;border-top:0;padding:16px 8px 12px;min-width:0}
+.sidebar-footer .user-card>div:last-child{min-width:0}
+.sidebar-footer .user-card strong,.sidebar-footer .user-card small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-logout{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #ffffff2b;border-radius:9px;padding:10px 12px;background:#ffffff10;color:#fff;font-weight:800;transition:background .16s,border-color .16s}
+.sidebar-logout:hover,.sidebar-logout:focus-visible{background:#ffffff20;border-color:#ffffff55;outline:none}

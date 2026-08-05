@@ -4,17 +4,7 @@ Aplicação institucional integrada a um novo projeto Firebase: Authentication, 
 
 ## Configuração do novo projeto
 
-As credenciais antigas não são utilizadas. O deploy exige estes sete GitHub Actions Secrets:
-
-- `FIREBASE_NEW_PROJECT_ID`
-- `FIREBASE_NEW_SERVICE_ACCOUNT`
-- `FIREBASE_NEW_API_KEY`
-- `FIREBASE_NEW_AUTH_DOMAIN`
-- `FIREBASE_NEW_STORAGE_BUCKET`
-- `FIREBASE_NEW_APP_ID`
-- `FIREBASE_NEW_MESSAGING_SENDER_ID`
-
-Use somente valores pertencentes ao mesmo projeto Firebase. Em `FIREBASE_NEW_SERVICE_ACCOUNT`, cole o JSON integral da nova conta de serviço — nunca um caminho local.
+O aplicativo está vinculado ao projeto `semed-gestao`. O deploy exige somente o GitHub Actions Repository Secret `FIREBASE_SERVICE_ACCOUNT_SEMED_GESTAO`, contendo o JSON integral de uma nova conta de serviço desse mesmo projeto — nunca um caminho local.
 
 O procedimento completo está em [CONFIGURACAO_FIREBASE.md](CONFIGURACAO_FIREBASE.md).
 

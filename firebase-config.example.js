@@ -1,10 +1,11 @@
-// Configuração exclusiva do NOVO projeto.
-// Copie para firebase-config.js apenas para testes locais e substitua todos os valores.
+// Configuração pública do aplicativo Web semed-gestao.
+// Copie este arquivo para firebase-config.js para executar localmente.
 window.SEMED_FIREBASE_CONFIG = {
-  apiKey: "NOVA_FIREBASE_API_KEY",
-  authDomain: "NOVO_PROJECT_ID.firebaseapp.com",
-  projectId: "NOVO_PROJECT_ID",
-  storageBucket: "BUCKET_EXATO_DO_NOVO_PROJETO",
-  messagingSenderId: "NOVO_MESSAGING_SENDER_ID",
-  appId: "NOVO_FIREBASE_APP_ID"
+  apiKey: "AIzaSyBG4xz_7UjlODQmBGkOPQhGN_fjREMUjZM",
+  authDomain: "semed-gestao.firebaseapp.com",
+  projectId: "semed-gestao",
+  storageBucket: "semed-gestao.firebasestorage.app",
+  messagingSenderId: "998882664182",
+  appId: "1:998882664182:web:40ee419bf6bc0fe1be56d7",
+  measurementId: "G-H4G35QX9QR"
 };
