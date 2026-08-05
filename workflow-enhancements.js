@@ -37,7 +37,7 @@ render=function(){baseRender();setupLoginLogo();if(session){const content=docume
 
 function setupLoginLogo(){
   const seal=document.querySelector('.login .seal');if(!seal)return;
-  seal.innerHTML='<img src="assets/logo_semed.jpeg" alt="Secretaria de Educação de Uberaba">';
+  seal.innerHTML='<img src="/assets/logo_semed.jpeg?v=20260805" alt="Secretaria Municipal de Educação de Uberaba" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="semed-logo-fallback" hidden><strong>SEMED</strong><small>SECRETARIA MUNICIPAL DE EDUCAÇÃO · UBERABA</small></span>';
   seal.classList.add('semed-logo')
 }
 
