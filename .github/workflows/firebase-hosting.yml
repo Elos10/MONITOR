@@ -123,5 +123,32 @@ jobs:
           npm install --global firebase-tools
           firebase --version
 
-      - name: Implantar
-        run: firebase deploy --only hosting,functions,firestore:rules,firestore:indexes,storage --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive
+      - name: Publicar site no Firebase Hosting
+        run: firebase deploy --only hosting --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive
+
+      - name: Publicar regras e indices do Firestore
+        id: firestore
+        continue-on-error: true
+        run: firebase deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive
+
+      - name: Publicar Cloud Functions
+        id: functions
+        continue-on-error: true
+        run: firebase deploy --only functions --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive
+
+      - name: Publicar regras do Storage
+        id: storage
+        continue-on-error: true
+        run: firebase deploy --only storage --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive
+
+      - name: Resumo da infraestrutura
+        if: always()
+        run: |
+          echo "### Implantacao Firebase" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Hosting: publicado como etapa obrigatoria" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Firestore: ${{ steps.firestore.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Functions: ${{ steps.functions.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Storage: ${{ steps.storage.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.firestore.outcome }}" != "success" ] || [ "${{ steps.functions.outcome }}" != "success" ] || [ "${{ steps.storage.outcome }}" != "success" ]; then
+            echo "::warning::O site foi publicado, mas uma ou mais partes da infraestrutura exigem permissoes adicionais no Google Cloud IAM."
+          fi

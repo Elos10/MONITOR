@@ -10,7 +10,7 @@ O procedimento completo está em [CONFIGURACAO_FIREBASE.md](CONFIGURACAO_FIREBAS
 
 ## Configuração local
 
-Copie `firebase-config.example.js` para `firebase-config.js` e preencha os valores exibidos em **Firebase Console > Configurações do projeto > Geral > Seus aplicativos**. O arquivo com valores reais é ignorado pelo Git.
+O arquivo `firebase-config.js` já contém a configuração pública do aplicativo Web `semed-gestao`. A credencial privada da conta de serviço permanece exclusivamente no GitHub Actions Secret `FIREBASE_SERVICE_ACCOUNT_SEMED_GESTAO`.
 
 ## Implantação
 

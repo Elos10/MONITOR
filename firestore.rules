@@ -24,7 +24,8 @@ service cloud.firestore {
       allow update: if admin() || (canWrite()
         && resource.data.get('assignedTo', '') == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'assigneeNote', 'updatedAt', 'receivedAt', 'receivedBy', 'receivedByName'
+          'status', 'progress', 'assigneeNote', 'updatedAt',
+          'receivedAt', 'receivedBy', 'receivedByName'
         ]));
       allow delete: if false;
     }

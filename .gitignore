@@ -23,7 +23,6 @@ build/
 !.env.example
 
 # Firebase local e credenciais
-firebase-config.js
 .firebase/
 firebase-debug.log
 ui-debug.log
