@@ -123,6 +123,11 @@ jobs:
           npm install --global firebase-tools
           firebase --version
 
+      - name: Garantir administrador inicial
+        env:
+          FIREBASE_INITIAL_ADMIN_PASSWORD: ${{ secrets.FIREBASE_INITIAL_ADMIN_PASSWORD }}
+        run: npm run bootstrap-admin --prefix functions
+
       - name: Publicar site no Firebase Hosting
         run: firebase deploy --only hosting --project "$FIREBASE_DEPLOY_PROJECT" --non-interactive
 
